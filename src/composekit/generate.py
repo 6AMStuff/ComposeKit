@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Sequence
 try:
     import yaml
     from git import Repo
+
     from composekit.utils.config import Config as _Config
 except ImportError as err:
     raise RuntimeError(
@@ -25,7 +26,7 @@ class Config(_Config):
         "subnet": "172.20.0.0/24",
         "restart_policy": "unless-stopped",
         "use_full_directory": True,
-        "capitalize_folder_name": False,
+        "capitalize_folder_name": "non_custom",
         "bind_path": "/home/docker/Docker",
         "output": "docker-compose.yaml",
     }
@@ -77,7 +78,10 @@ def get_folder_name(
     name: str, container: dict[str, Any], config: Config
 ) -> str:
     folder = str(container.get("folder", name))
-    if config["capitalize_folder_name"]:
+    mode = config["capitalize_folder_name"]
+    if mode == "full" or (
+        mode == "non_custom" and not container.get("folder")
+    ):
         folder = capitalize_name(folder)
 
     return folder

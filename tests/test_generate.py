@@ -1,13 +1,14 @@
 from typing import Any
 from unittest.mock import MagicMock
+
 from composekit.generate import (
     Config,
-    get_folder_name,
-    is_custom_bind,
-    handle_volumes,
-    duplicate_entries,
     capitalize_name,
+    duplicate_entries,
     generate,
+    get_folder_name,
+    handle_volumes,
+    is_custom_bind,
 )
 
 
@@ -83,3 +84,29 @@ def test_generate_minimal() -> None:
     assert result["container_name"] == "web"
     assert result["restart"] == "unless-stopped"
     assert result["networks"] == ["cloud"]
+
+
+def test_handle_volumes_with_full_capitalize() -> None:
+    config = Config()
+    config["capitalize_folder_name"] = "full"
+    volumes = ["/volume", "/volume2"]
+    container: dict[str, Any] = {}
+    folder = get_folder_name("container", container, config)
+    result = handle_volumes(config, folder, volumes, [])
+    assert result == [
+        "${BIND_PATH}/Container/volume:/volume",
+        "${BIND_PATH}/Container/volume2:/volume2",
+    ]
+
+
+def test_handle_volumes_with_non_custom_capitalize() -> None:
+    config = Config()
+    config["capitalize_folder_name"] = "non_custom"
+    volumes = ["/volume", "/volume2"]
+    container: dict[str, Any] = {"folder": "container"}
+    folder = get_folder_name("container", container, config)
+    result = handle_volumes(config, folder, volumes, [])
+    assert result == [
+        "${BIND_PATH}/container/volume:/volume",
+        "${BIND_PATH}/container/volume2:/volume2",
+    ]
