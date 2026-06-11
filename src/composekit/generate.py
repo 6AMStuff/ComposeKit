@@ -196,7 +196,7 @@ def generate(
                 result[option] = value
 
     if "network_mode" not in container:
-        result["networks"] = [network]
+        result.setdefault("networks", []).append(network)
 
     return result
 
