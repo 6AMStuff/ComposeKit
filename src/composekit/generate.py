@@ -36,6 +36,7 @@ OPTIONS = (
     "folder",
     "name",
     "image",
+    "privileged",
     "network",
     "working_dir",
     "command",
