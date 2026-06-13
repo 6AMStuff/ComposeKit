@@ -1,7 +1,11 @@
 name: update compose files
 run-name: update compose files
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    paths:
+      - "containers/**"
+  workflow_dispatch:
 
 permissions:
   contents: write
