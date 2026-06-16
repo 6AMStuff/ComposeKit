@@ -88,6 +88,7 @@ def test_generate_minimal() -> None:
 
 def test_handle_volumes_with_full_capitalize() -> None:
     config = Config()
+    config["bind_path"] = "${BIND_PATH}"
     config["capitalize_folder_name"] = "full"
     volumes = ["/volume", "/volume2"]
     container: dict[str, Any] = {}
@@ -101,6 +102,7 @@ def test_handle_volumes_with_full_capitalize() -> None:
 
 def test_handle_volumes_with_non_custom_capitalize() -> None:
     config = Config()
+    config["bind_path"] = "${BIND_PATH}"
     config["capitalize_folder_name"] = "non_custom"
     volumes = ["/volume", "/volume2"]
     container: dict[str, Any] = {"folder": "container"}
