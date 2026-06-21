@@ -5,8 +5,8 @@ from typing import Any, ClassVar
 
 class Config:
     config: dict[str, Any]
-    config_paths: ClassVar[tuple[str, ...]]
-    default_values: ClassVar[dict[str, Any]]
+    config_paths: ClassVar[tuple[str, ...]] = ()
+    default_values: ClassVar[dict[str, Any]] = {}
 
     def __init__(self) -> None:
         self.config = {}
