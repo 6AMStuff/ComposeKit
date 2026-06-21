@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import re
-import sys
 import asyncio
 import logging
+import re
+import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -11,8 +11,10 @@ try:
     import httpx
     import yaml
     from git import Repo
-    from composekit.utils import list_tags, Config as _Config
     from packaging.version import InvalidVersion, Version
+
+    from composekit.utils import Config as _Config
+    from composekit.utils import iter_container_files, list_tags, open_repo
 except ImportError as err:
     raise RuntimeError(
         "ERROR: Missing required packages. See the README."
@@ -211,18 +213,11 @@ async def process_file(
 def main() -> None:
     async def process() -> None:
         config = Config()
-        repo = Repo(".")
-        # Discard any changes
-        repo.index.reset(working_tree=True)
+
+        repo = open_repo()
         git_lock = asyncio.Lock()
 
         containers_folder = str(config["containers_folder"])
-
-        paths = (
-            p
-            for p in Path(containers_folder).iterdir()
-            if p.is_file() and p.suffix in {".yml", ".yaml"}
-        )
 
         async with httpx.AsyncClient(
             timeout=int(config["timeout"]), follow_redirects=True
@@ -230,7 +225,7 @@ def main() -> None:
             await asyncio.gather(
                 *(
                     process_file(path, client, config, repo, git_lock)
-                    for path in paths
+                    for path in iter_container_files(containers_folder)
                 )
             )
 

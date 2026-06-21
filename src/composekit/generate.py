@@ -2,14 +2,13 @@
 
 import os
 import shutil
-from pathlib import Path
 from typing import Any, ClassVar, Sequence
 
 try:
     import yaml
-    from git import Repo
 
     from composekit.utils import Config as _Config
+    from composekit.utils import iter_container_files, open_repo
 except ImportError as err:
     raise RuntimeError(
         "ERROR: Missing required packages. See the README."
@@ -202,10 +201,6 @@ def generate(
 
 
 def main() -> None:
-    repo = Repo(".")
-    # Discard any changes
-    repo.index.reset(working_tree=True)
-
     config = Config()
 
     containers_folder = str(config["containers_folder"])
@@ -240,12 +235,7 @@ def main() -> None:
 
     os.mkdir(composes_folder)
 
-    paths = sorted(
-        p
-        for p in Path(containers_folder).iterdir()
-        if p.is_file() and p.suffix in {".yml", ".yaml"}
-    )
-
+    paths = iter_container_files(containers_folder)
     for path in paths:
         used_names: list[str] = []
 
@@ -279,6 +269,7 @@ def main() -> None:
     with open(output, "w") as file:
         yaml.dump(main_template, file, sort_keys=False)
 
+    repo = open_repo(reset=False)
     repo.git.add(".")
     staged_count = len(repo.index.diff(repo.head.commit))
     if staged_count > 0:

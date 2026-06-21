@@ -9,6 +9,8 @@ from .generate import OPTIONS, Config
 try:
     import yaml
     from git import Repo
+
+    from composekit.utils import iter_container_files, open_repo
 except ImportError as err:
     raise RuntimeError(
         "ERROR: Missing required packages. See the README."
@@ -39,19 +41,12 @@ async def process_file(
 
 def main() -> None:
     async def process() -> None:
-        repo = Repo(".")
-        # Discard any changes
-        repo.index.reset(working_tree=True)
+        config = Config()
+        repo = open_repo()
         git_lock = asyncio.Lock()
 
-        config = Config()
         containers_folder = str(config["containers_folder"])
-
-        paths = (
-            p
-            for p in Path(containers_folder).iterdir()
-            if p.is_file() and p.suffix in {".yml", ".yaml"}
-        )
+        paths = iter_container_files(containers_folder)
 
         await asyncio.gather(
             *(process_file(path, repo, git_lock) for path in paths)
