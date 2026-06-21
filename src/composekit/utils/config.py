@@ -1,6 +1,7 @@
 import os
-import yaml
 from typing import Any, ClassVar
+
+import yaml
 
 
 class Config:
@@ -17,7 +18,7 @@ class Config:
             if not os.path.exists(path):
                 continue
 
-            with open(path, "r") as file:
+            with open(path) as file:
                 self.config.update(yaml.safe_load(file) or {})
 
     def __setitem__(self, key: str, value: Any) -> None:

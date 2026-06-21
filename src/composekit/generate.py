@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import shutil
-import argparse
+from collections.abc import Sequence
 from importlib.resources import files
-from typing import Any, ClassVar, Sequence
+from typing import Any, ClassVar
 
 try:
     import yaml
@@ -264,7 +265,7 @@ def main(args: argparse.Namespace) -> None:
         )
         service["services"] = {}
 
-        with open(path, "r") as file:
+        with open(path) as file:
             containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
 
         for container in containers:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import asyncio
 import argparse
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ async def process_file(
     repo: Repo | None,
     git_lock: asyncio.Lock,
 ) -> None:
-    with open(path, "r") as file:
+    with open(path) as file:
         containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
 
     for i, container in enumerate(containers):

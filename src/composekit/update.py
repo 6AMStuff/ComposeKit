@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import re
-import sys
+import argparse
 import asyncio
 import logging
-import argparse
+import re
+import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -188,7 +188,7 @@ async def process_file(
     repo: Repo | None,
     git_lock: asyncio.Lock,
 ) -> None:
-    with open(path, "r") as file:
+    with open(path) as file:
         containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
 
     for container in containers:

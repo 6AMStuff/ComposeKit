@@ -1,6 +1,40 @@
 import httpx
 
 
+async def _list_tags_with_bearer_auth(
+    client: httpx.AsyncClient,
+    url: str,
+    www: str,
+    auth: tuple[str, str] | None,
+) -> list[str]:
+    if not www.lower().startswith("bearer"):
+        return []
+
+    parts = www[len("Bearer ") :].strip()
+    params = {}
+    for p in parts.split(","):
+        if "=" not in p:
+            continue
+
+        k, v = p.split("=", 1)
+        params[k.strip()] = v.strip().strip('"')
+
+    realm = params.pop("realm", None)
+    if not realm:
+        return []
+
+    request = await client.get(realm, params=params, auth=auth)
+    request.raise_for_status()
+    token_json = request.json()
+    token = token_json.get("token") or token_json.get("access_token")
+    if not token:
+        raise RuntimeError("Token endpoint returned no token")
+
+    r = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+    r.raise_for_status()
+    return r.json().get("tags", []) or []
+
+
 async def list_tags(
     client: httpx.AsyncClient,
     registry_host: str | None,
@@ -27,34 +61,9 @@ async def list_tags(
     r = await client.get(url, auth=auth)
     if r.status_code == 200:
         return r.json().get("tags", []) or []
-
-    if r.status_code == 401:
+    elif r.status_code == 401:
         www = r.headers.get("WWW-Authenticate", "")
-        if www.lower().startswith("bearer"):
-            parts = www[len("Bearer ") :].strip()
-            params = {}
-            for p in parts.split(","):
-                if "=" not in p:
-                    continue
-
-                k, v = p.split("=", 1)
-                params[k.strip()] = v.strip().strip('"')
-
-            realm = params.pop("realm", None)
-            if not realm:
-                return []
-
-            request = await client.get(realm, params=params, auth=auth)
-            request.raise_for_status()
-            token_json = request.json()
-            token = token_json.get("token") or token_json.get("access_token")
-            if not token:
-                raise RuntimeError("Token endpoint returned no token")
-
-            headers = {"Authorization": f"Bearer {token}"}
-            r = await client.get(url, headers=headers)
-            r.raise_for_status()
-            return r.json().get("tags", []) or []
+        return await _list_tags_with_bearer_auth(client, url, www, auth)
 
     r.raise_for_status()
     return []
