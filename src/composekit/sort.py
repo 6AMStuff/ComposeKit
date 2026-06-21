@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+import argparse
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,7 @@ except ImportError as err:
 
 async def process_file(
     path: Path,
-    repo: Repo,
+    repo: Repo | None,
     git_lock: asyncio.Lock,
 ) -> None:
     with open(path, "r") as file:
@@ -35,14 +36,23 @@ async def process_file(
             with open(path, "w") as file:
                 yaml.dump_all(containers, file, sort_keys=False)
 
-            repo.index.add(path)
-            repo.index.commit(f"chore({path.stem}): sort keys\n\n[skip tests]")
+            if repo is not None:
+                repo.index.add(path)
+                repo.index.commit(
+                    f"chore({path.stem}): sort keys\n\n[skip tests]"
+                )
 
 
-def main() -> None:
+def main(args: argparse.Namespace) -> None:
     async def process() -> None:
         config = Config()
-        repo = open_repo()
+        if args.config:
+            config.load(*args.config)
+
+        if args.containers:
+            config["containers_folder"] = args.containers
+
+        repo = open_repo() if args.commit else None
         git_lock = asyncio.Lock()
 
         containers_folder = str(config["containers_folder"])
@@ -53,7 +63,3 @@ def main() -> None:
         )
 
     asyncio.run(process())
-
-
-if __name__ == "__main__":
-    main()

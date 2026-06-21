@@ -1,4 +1,4 @@
-containers_folder: containers
+containers_folder: examples/containers
 default_registry: docker.io
 limit: 40
 timeout: 10

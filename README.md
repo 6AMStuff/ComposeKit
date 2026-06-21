@@ -2,32 +2,52 @@
 
 A project to simplify Docker container management, made with love.
 
-This project includes three commands:
-- sort: sorts keys in Docker Compose files
-- update: updates Docker images
-- generate: creates Docker Compose files
+It ships a single `composekit` command with three subcommands:
+- `composekit sort`: sorts keys in Docker Compose files
+- `composekit update`: updates Docker images
+- `composekit generate`: creates Docker Compose files
 
-Key points:
-- Generation rules: [config/generate.yaml](config/generate.yaml)
-- Update rules: [config/update.yaml](config/update.yaml)
-- Compose files are produced automatically via GitHub Actions workflows
+See the [examples/](examples/) directory for sample container definitions
+and config files you can copy and adapt:
+- Generation rules: [examples/generate.yaml](examples/generate.yaml)
+- Update rules: [examples/update.yaml](examples/update.yaml)
+- Container definitions: [examples/containers/](examples/containers/)
 
-## Running locally
-- [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Create a virtual env:
+## Installation
+
+Install from a checkout (or any source) with [pipx](https://pipx.pypa.io/):
 ```bash
-uv venv
+pipx install .
 ```
-- Install the package in editable mode:
+or with [uv](https://docs.astral.sh/uv):
 ```bash
-uv pip install -e .
+uv tool install .
 ```
-- And finally, run one of the commands based on your needs:
+
+## Usage
+
+Each subcommand reads container definitions from a folder (defaulting to
+`containers/` in the current directory) and writes the generated compose
+files relative to where you run it. Point it at your own files with flags:
 ```bash
-uv run sort
-uv run update
-uv run generate
+composekit generate -c config/generate.yaml
+composekit update -c config/update.yaml
+composekit sort -C containers/
 ```
+
+To try it against the bundled examples from the repo root:
+```bash
+composekit generate -c examples/generate.yaml
+```
+
+Common flags:
+- `-C/--containers PATH`: folder with container definitions
+- `-c/--config PATH`: config file to load (repeatable)
+- `--commit`: commit the resulting changes to the git repository (off by
+  default; intended for CI)
+
+Generate also accepts `-o/--composes PATH` and `--output PATH`. See
+`composekit <command> --help` for the full list.
 
 ## License
 

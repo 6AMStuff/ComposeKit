@@ -27,12 +27,13 @@ dev = [
 ]
 
 [project.scripts]
-sort = "composekit.sort:main"
-update = "composekit.update:main"
-generate = "composekit.generate:main"
+composekit = "composekit.__main__:main"
 
 [tool.uv]
 package = true
+
+[tool.setuptools.package-data]
+composekit = ["templates/*.yaml"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

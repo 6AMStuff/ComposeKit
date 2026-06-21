@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import asyncio
-import logging
 import re
 import sys
+import asyncio
+import logging
+import argparse
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -184,7 +185,7 @@ async def process_file(
     path: Path,
     client: httpx.AsyncClient,
     config: Config,
-    repo: Repo,
+    repo: Repo | None,
     git_lock: asyncio.Lock,
 ) -> None:
     with open(path, "r") as file:
@@ -201,20 +202,26 @@ async def process_file(
             with open(path, "w") as file:
                 yaml.dump_all(containers, file, sort_keys=False)
 
-            repo.index.add(path)
-            repo.index.commit(
-                f"chore({path.stem}): update {image} to {newest_version}"
-                "\n\n[skip tests]"
-            )
+            if repo is not None:
+                repo.index.add(path)
+                repo.index.commit(
+                    f"chore({path.stem}): update {image} to {newest_version}"
+                    "\n\n[skip tests]"
+                )
 
         logging.info(f"{full_image}: Updated to {newest_version}.")
 
 
-def main() -> None:
+def main(args: argparse.Namespace) -> None:
     async def process() -> None:
         config = Config()
+        if args.config:
+            config.load(*args.config)
 
-        repo = open_repo()
+        if args.containers:
+            config["containers_folder"] = args.containers
+
+        repo = open_repo() if args.commit else None
         git_lock = asyncio.Lock()
 
         containers_folder = str(config["containers_folder"])
@@ -230,7 +237,3 @@ def main() -> None:
             )
 
     asyncio.run(process())
-
-
-if __name__ == "__main__":
-    main()

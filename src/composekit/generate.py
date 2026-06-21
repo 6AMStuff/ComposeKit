@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import argparse
 from importlib.resources import files
 from typing import Any, ClassVar, Sequence
 
@@ -201,8 +202,25 @@ def generate(
     return result
 
 
-def main() -> None:
+def build_config(args: argparse.Namespace) -> Config:
     config = Config()
+    if args.config:
+        config.load(*args.config)
+
+    overrides = {
+        "containers_folder": args.containers,
+        "composes_folder": args.composes,
+        "output": args.output,
+    }
+    for key, value in overrides.items():
+        if value:
+            config[key] = value
+
+    return config
+
+
+def main(args: argparse.Namespace) -> None:
+    config = build_config(args)
 
     containers_folder = str(config["containers_folder"])
     composes_folder = str(config["composes_folder"])
@@ -271,15 +289,12 @@ def main() -> None:
     with open(output, "w") as file:
         yaml.dump(main_template, file, sort_keys=False)
 
-    repo = open_repo(reset=False)
-    repo.git.add(".")
-    staged_count = len(repo.index.diff(repo.head.commit))
-    if staged_count > 0:
-        repo.index.commit(
-            f"chore(composes): update {staged_count} compose file(s)"
-            "\n\n[skip tests]"
-        )
-
-
-if __name__ == "__main__":
-    main()
+    if args.commit:
+        repo = open_repo(reset=False)
+        repo.git.add(".")
+        staged_count = len(repo.index.diff(repo.head.commit))
+        if staged_count > 0:
+            repo.index.commit(
+                f"chore(composes): update {staged_count} compose file(s)"
+                "\n\n[skip tests]"
+            )

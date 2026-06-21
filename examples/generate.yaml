@@ -1,10 +1,10 @@
-containers_folder: containers
+containers_folder: examples/containers
 composes_folder: composes
 network_name: cloud
 network_driver: bridge
 subnet: 172.20.0.0/24
 restart_policy: unless-stopped
 use_full_directory: true
-capitalize_folder_name: false
-bind_path: /home/docker/Docker
+capitalize_folder_name: non_custom
+bind_path: /path/to/docker/data
 output: docker-compose.yaml
