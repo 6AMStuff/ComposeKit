@@ -4,10 +4,16 @@ run-name: python tests
 on:
   push:
     paths:
-      - "src/**"
+      - '**.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/python-tests.yaml'
   pull_request:
     paths:
-      - "src/**"
+      - '**.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/python-tests.yaml'
   workflow_dispatch:
 
 jobs:
