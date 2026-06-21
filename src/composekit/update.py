@@ -11,8 +11,7 @@ try:
     import httpx
     import yaml
     from git import Repo
-    from composekit.utils.oci_api import list_tags
-    from composekit.utils.config import Config as _Config
+    from composekit.utils import list_tags, Config as _Config
     from packaging.version import InvalidVersion, Version
 except ImportError as err:
     raise RuntimeError(

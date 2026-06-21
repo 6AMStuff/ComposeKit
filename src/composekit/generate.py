@@ -9,7 +9,7 @@ try:
     import yaml
     from git import Repo
 
-    from composekit.utils.config import Config as _Config
+    from composekit.utils import Config as _Config
 except ImportError as err:
     raise RuntimeError(
         "ERROR: Missing required packages. See the README."
