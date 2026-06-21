@@ -100,8 +100,8 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
             "limit": 10,
             "timeout": 5,
             "user/image": {"update": True},
-            "user": {},
-            "image": {},
+            "user": dict[str, Any](),
+            "image": dict[str, Any](),
         }[key]
         container = {"image": "user/image:1.0.0"}
         with patch(

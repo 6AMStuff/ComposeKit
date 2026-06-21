@@ -172,7 +172,7 @@ def generate(
     network = str(config["network_name"])
 
     used_volumes: list[str] = []
-    result = {
+    result: dict[str, Any] = {
         "image": container.pop("image"),
         "hostname": name,
         "container_name": name,
@@ -244,7 +244,7 @@ def main(args: argparse.Namespace) -> None:
             gateway=gateway,
         )
     )
-    main_template["services"] = {}
+    main_template["services"] = dict[str, Any]()
 
     composes_template = (
         templates.joinpath("composes.yaml").read_text().lstrip()
@@ -263,7 +263,7 @@ def main(args: argparse.Namespace) -> None:
         service: dict[str, dict[str, Any]] = yaml.safe_load(
             service_template.format(network=network)
         )
-        service["services"] = {}
+        service["services"] = dict[str, Any]()
 
         with open(path) as file:
             containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
