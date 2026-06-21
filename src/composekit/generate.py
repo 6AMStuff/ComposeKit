@@ -2,6 +2,7 @@
 
 import os
 import shutil
+from importlib.resources import files
 from typing import Any, ClassVar, Sequence
 
 try:
@@ -211,24 +212,25 @@ def main() -> None:
     gateway = subnet.rsplit(".", 1)[0] + ".1"
     output = str(config["output"])
 
-    with open("src/composekit/templates/main-compose.yaml") as file:
-        main_template = yaml.safe_load(
-            file.read()
-            .lstrip()
-            .format(
-                network=network,
-                driver=network_driver,
-                subnet=subnet,
-                gateway=gateway,
-            )
+    templates = files("composekit.templates")
+
+    main_template = yaml.safe_load(
+        templates.joinpath("main-compose.yaml")
+        .read_text()
+        .lstrip()
+        .format(
+            network=network,
+            driver=network_driver,
+            subnet=subnet,
+            gateway=gateway,
         )
-        main_template["services"] = {}
+    )
+    main_template["services"] = {}
 
-    with open("src/composekit/templates/composes.yaml") as file:
-        composes_template = file.read().lstrip()
-
-    with open("src/composekit/templates/services.yaml") as file:
-        service_template = file.read().lstrip()
+    composes_template = (
+        templates.joinpath("composes.yaml").read_text().lstrip()
+    )
+    service_template = templates.joinpath("services.yaml").read_text().lstrip()
 
     if os.path.exists(composes_folder):
         shutil.rmtree(composes_folder)
