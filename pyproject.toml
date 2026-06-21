@@ -18,12 +18,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "mypy>=1.19.1",
   "pytest>=9.0.2",
   "pytest-sugar>=1.1.1",
   "pytest-asyncio>=1.3.0",
   "types-PyYAML>=6.0.12",
   "ruff>=0.14.14",
+  "pyrefly>=1.1.1",
 ]
 
 [project.scripts]
@@ -69,9 +69,12 @@ max-complexity = 8
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.mypy]
-files = ["src", "tests"]
-strict = true
+[tool.pyrefly]
+project-includes = ["src", "tests"]
+min-severity = "info"
+preset = "strict"
+strict-callable-subtyping = true
+errors = { implicit-any = true, implicit-any-attribute = true, implicit-any-empty-container = true, implicit-any-parameter = true, implicit-any-type-argument = true, unannotated-parameter = true, unannotated-attribute = true, unannotated-return = true, unannotated-protocol-member = true, bad-override = true, bad-override-mutable-attribute = true, bad-override-param-name = true, bad-param-name-override = true, missing-override-decorator = true, inconsistent-inheritance = true, unused-ignore = true, unused-coroutine = true, redundant-cast = true, unreachable = true, redefinition = true, deprecated = true }
 
 [tool.commitizen]
 name = "cz_customize"
