@@ -10,15 +10,15 @@ class Config:
 
     def __init__(self) -> None:
         self.config = {}
-        for config_path in self.config_paths:
-            self._load_config(config_path)
+        self.load(*self.config_paths)
 
-    def _load_config(self, file_path: str) -> None:
-        if not os.path.exists(file_path):
-            return
+    def load(self, *paths: str) -> None:
+        for path in paths:
+            if not os.path.exists(path):
+                continue
 
-        with open(file_path, "r") as file:
-            self.config.update(yaml.safe_load(file) or {})
+            with open(path, "r") as file:
+                self.config.update(yaml.safe_load(file) or {})
 
     def __setitem__(self, key: str, value: Any) -> None:
         self.config[key] = value
