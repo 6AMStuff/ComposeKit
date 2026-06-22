@@ -297,5 +297,4 @@ def main(args: argparse.Namespace) -> None:
         if staged_count > 0:
             repo.index.commit(
                 f"chore(composes): update {staged_count} compose file(s)"
-                "\n\n[skip tests]"
             )

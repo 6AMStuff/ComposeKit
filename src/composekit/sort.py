@@ -38,9 +38,7 @@ async def process_file(
 
             if repo is not None:
                 repo.index.add(path)
-                repo.index.commit(
-                    f"chore({path.stem}): sort keys\n\n[skip tests]"
-                )
+                repo.index.commit(f"chore({path.stem}): sort keys")
 
 
 def main(args: argparse.Namespace) -> None:
