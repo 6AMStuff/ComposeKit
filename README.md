@@ -15,14 +15,16 @@ and config files you can copy and adapt:
 
 ## Installation
 
-Install from a checkout (or any source) with [pipx](https://pipx.pypa.io/):
+Install directly from the repository with [uv](https://docs.astral.sh/uv):
 ```bash
-pipx install .
+uv tool install git+https://github.com/itisFarzin/ComposeKit
 ```
-or with [uv](https://docs.astral.sh/uv):
+or with [pipx](https://pipx.pypa.io/):
 ```bash
-uv tool install .
+pipx install git+https://github.com/itisFarzin/ComposeKit
 ```
+
+Pin a release by appending `@<tag>`, e.g. `@v1.0.0`.
 
 ## Usage
 
