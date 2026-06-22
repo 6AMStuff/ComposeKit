@@ -1,3 +1,13 @@
+## v1.0.1 (2026-06-22)
+
+### Bug Fixes
+
+- **composekit**: drop obsolete test-skip token from auto-commits
+
+### Documentation
+
+- **readme**: install from git url
+
 ## v1.0.0 (2026-06-22)
 
 ### Features
