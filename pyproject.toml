@@ -83,7 +83,7 @@ errors = { implicit-any = true, implicit-any-attribute = true, implicit-any-empt
 [tool.commitizen]
 name = "cz_customize"
 tag_format = "v$version"
-version_provider = "scm"
+version_provider = "uv"
 version_scheme = "pep440"
 update_changelog_on_bump = true
 
