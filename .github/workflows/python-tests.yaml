@@ -3,6 +3,8 @@ run-name: python tests
 
 on:
   push:
+    branches:
+      - main
     paths:
       - '**.py'
       - 'pyproject.toml'
