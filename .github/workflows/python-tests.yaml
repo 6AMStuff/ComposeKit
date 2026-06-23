@@ -52,14 +52,11 @@ jobs:
           restore-keys: |
             uv-${{ runner.os }}-python${{ env.PYTHON_VERSION }}-
 
-      - name: Install dependencies
-        run: uv sync --locked --extra dev
-
       - name: Lint check
-        run: uv run ruff check .
+        run: uv run --locked --extra dev ruff check
 
       - name: Type check
-        run: uv run pyrefly check
+        run: uv run --locked --extra dev pyrefly check
 
   test:
     name: Test with Python ${{ matrix.python-version }}
@@ -100,8 +97,5 @@ jobs:
             uv-${{ runner.os }}-python${{ matrix.python-version }}-
             uv-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: uv sync --locked --extra dev
-
       - name: Run tests
-        run: uv run --extra dev pytest
+        run: uv run --locked --extra dev pytest
