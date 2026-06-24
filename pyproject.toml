@@ -13,15 +13,15 @@ dependencies = [
   "GitPython>=3.1.46",
   "PyYAML>=6.0.3",
   "httpx[socks]>=0.28.1",
-  "packaging>=25.0",
+  "packaging>=26.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=9.0.2",
+  "pytest>=9.1.0",
   "pytest-sugar>=1.1.1",
-  "pytest-asyncio>=1.3.0",
-  "ruff>=0.14.14",
+  "pytest-asyncio>=1.4.0",
+  "ruff>=0.15.17",
   "pyrefly>=1.1.1",
   "types-pyyaml>=6.0.12.20260518",
 ]
@@ -30,7 +30,7 @@ dev = [
 composekit = "composekit.__main__:main"
 
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
