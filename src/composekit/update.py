@@ -6,7 +6,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 try:
     import httpx
@@ -14,6 +14,7 @@ try:
     from git import Repo
     from packaging.version import InvalidVersion, Version
 
+    from composekit.container import Container, load_containers
     from composekit.utils import Config as _Config
     from composekit.utils import iter_container_files, list_tags, open_repo
 except ImportError as err:
@@ -29,7 +30,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class Config(_Config):
     config_paths = ("config/update.yaml", "config/update.private.yaml")
-    default_values: ClassVar[dict[str, str | int]] = {
+    default_values: ClassVar[dict[str, object]] = {
         "containers_folder": "containers",
         "default_registry": "docker.io",
         "limit": 40,
@@ -87,25 +88,49 @@ def parse_version(version: str | None) -> Version | None:
     return None
 
 
+def get_update_options(
+    config: Config, full_image: str, user: str | None, image: str
+) -> dict[str, object]:
+    for item in (full_image, f"{user}/{image}", image):
+        config_data = config[item]
+        if isinstance(config_data, dict):
+            return {
+                key: value
+                for key, value in config_data.items()
+                if isinstance(key, str)
+            }
+
+    return {}
+
+
 async def find_versions(
     config: Config,
-    container: dict[str, Any],
+    options: dict[str, object],
     client: httpx.AsyncClient,
     registry: str | None,
     user: str | None,
     image: str,
 ) -> list[str]:
-    limit = int(container.get("limit") or config["limit"])
+    limit_config = options.get("limit") or config["limit"]
+    limit = (
+        limit_config
+        if isinstance(limit_config, int)
+        else int(limit_config)
+        if isinstance(limit_config, str) and limit_config.isdigit()
+        else 10
+    )
     full_image = "/".join(filter(None, [registry, user, image]))
 
     try:
         user = "library" if user is None else user
+        username = options.get("username")
+        password = options.get("password")
         if tags := await list_tags(
             client,
             registry,
             f"{user}/{image}",
-            container.get("username"),
-            container.get("password"),
+            username if isinstance(username, str) else None,
+            password if isinstance(password, str) else None,
         ):
             return tags[-limit:]
 
@@ -118,34 +143,26 @@ async def find_versions(
 
 async def update(
     config: Config,
-    container: dict[str, Any],
+    container: Container,
     client: httpx.AsyncClient,
 ) -> tuple[str, str, str] | None:
-    if not (result := parse_image(str(container["image"]))):
+    if not (result := parse_image(container.image)):
         return None
 
     registry, user, image, version = result
     full_image = "/".join(filter(None, [registry, user, image]))
     registry = registry or str(config["default_registry"])
 
-    container = next(
-        (
-            _data
-            for item in [
-                full_image,
-                f"{user}/{image}",
-                image,
-            ]
-            if (_data := config[item]) and isinstance(_data, dict)
-        ),
-        {},
-    )
+    options = get_update_options(config, full_image, user, image)
 
-    if container.get("update") is False:
+    if options.get("update") is False:
         logging.info(f"{full_image}: Update is disabled.")
         return None
 
-    version_regex = container.get("version_regex")
+    version_regex_config = options.get("version_regex")
+    version_regex = (
+        version_regex_config if isinstance(version_regex_config, str) else None
+    )
 
     if not (
         current_version := parse_version(
@@ -159,7 +176,7 @@ async def update(
 
     if not (
         raw_versions := await find_versions(
-            config, container, client, registry, user, image
+            config, options, client, registry, user, image
         )
     ):
         return None
@@ -189,18 +206,22 @@ async def process_file(
     git_lock: asyncio.Lock,
 ) -> None:
     with open(path) as file:
-        containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
+        containers = load_containers(yaml.safe_load_all(file))
 
     for container in containers:
         if not (result := await update(config, container, client)):
             continue
 
         full_image, image, newest_version = result
-        container["image"] = f"{full_image}:{newest_version}"
+        container.image = f"{full_image}:{newest_version}"
 
         async with git_lock:
             with open(path, "w") as file:
-                yaml.dump_all(containers, file, sort_keys=False)
+                yaml.dump_all(
+                    [item.to_dict() for item in containers],
+                    file,
+                    sort_keys=False,
+                )
 
             if repo is not None:
                 repo.index.add(path)
@@ -224,9 +245,11 @@ def main(args: argparse.Namespace) -> None:
         git_lock = asyncio.Lock()
 
         containers_folder = str(config["containers_folder"])
-
+        timeout = (
+            int(_value) if (_value := str(config["timeout"])).isdigit() else 10
+        )
         async with httpx.AsyncClient(
-            timeout=int(config["timeout"]), follow_redirects=True
+            timeout=timeout, follow_redirects=True
         ) as client:
             await asyncio.gather(
                 *(

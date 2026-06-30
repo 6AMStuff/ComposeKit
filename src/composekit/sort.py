@@ -3,9 +3,9 @@
 import argparse
 import asyncio
 from pathlib import Path
-from typing import Any
 
-from .generate import OPTIONS, Config
+from .container import Container, load_containers
+from .generate import Config
 
 try:
     import yaml
@@ -24,17 +24,21 @@ async def process_file(
     git_lock: asyncio.Lock,
 ) -> None:
     with open(path) as file:
-        containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
+        containers = load_containers(yaml.safe_load_all(file))
 
-    for i, container in enumerate(containers):
-        sorted_dict = {k: container[k] for k in OPTIONS if k in container}
-        if list(container.keys()) == list(sorted_dict.keys()):
-            continue
+    sorted_containers: list[dict[str, object]] = []
+    changed = False
 
-        containers[i] = sorted_dict
+    for container in containers:
+        data = container.to_dict()
+        sorted_dict = {k: data[k] for k in Container.fields() if k in data}
+        sorted_containers.append(sorted_dict)
+        changed = changed or list(data.keys()) != list(sorted_dict.keys())
+
+    if changed:
         async with git_lock:
             with open(path, "w") as file:
-                yaml.dump_all(containers, file, sort_keys=False)
+                yaml.dump_all(sorted_containers, file, sort_keys=False)
 
             if repo is not None:
                 repo.index.add(path)

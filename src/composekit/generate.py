@@ -5,11 +5,12 @@ import os
 import shutil
 from collections.abc import Sequence
 from importlib.resources import files
-from typing import Any, ClassVar
+from typing import ClassVar
 
 try:
     import yaml
 
+    from composekit.container import Container, Volume, load_containers
     from composekit.utils import Config as _Config
     from composekit.utils import iter_container_files, open_repo
 except ImportError as err:
@@ -20,7 +21,7 @@ except ImportError as err:
 
 class Config(_Config):
     config_paths = ("config/generate.yaml",)
-    default_values: ClassVar[dict[str, str | bool]] = {
+    default_values: ClassVar[dict[str, object]] = {
         "containers_folder": "containers",
         "composes_folder": "composes",
         "network_name": "cloud",
@@ -33,32 +34,6 @@ class Config(_Config):
         "output": "docker-compose.yaml",
     }
 
-
-OPTIONS = (
-    "folder",
-    "name",
-    "image",
-    "privileged",
-    "network",
-    "working_dir",
-    "command",
-    "network_mode",
-    "user",
-    "entrypoint",
-    "cap_add",
-    "cap_drop",
-    "sysctls",
-    "labels",
-    "devices",
-    "volumes",
-    "tmpfs",
-    "environment",
-    "group_add",
-    "depends_on",
-    "healthcheck",
-    "ports",
-    "shm_size",
-)
 
 MOUNT_OPTIONS = {
     "rw",
@@ -77,14 +52,10 @@ MOUNT_OPTIONS = {
 }
 
 
-def get_folder_name(
-    name: str, container: dict[str, Any], config: Config
-) -> str:
-    folder = str(container.get("folder", name))
+def get_folder_name(name: str, container: Container, config: Config) -> str:
+    folder = container.folder or name
     mode = config["capitalize_folder_name"]
-    if mode == "full" or (
-        mode == "non_custom" and not container.get("folder")
-    ):
+    if mode == "full" or (mode == "non_custom" and not container.folder):
         folder = capitalize_name(folder)
 
     return folder
@@ -94,7 +65,7 @@ def capitalize_name(name: str) -> str:
     return name[0].upper() + name[1:]
 
 
-def is_custom_bind(volume: str | dict[str, Any]) -> bool:
+def is_custom_bind(volume: Volume) -> bool:
     if isinstance(volume, dict):
         return True
 
@@ -112,13 +83,13 @@ def is_custom_bind(volume: str | dict[str, Any]) -> bool:
 def handle_volumes(
     config: Config,
     folder: str,
-    volumes: Sequence[str | dict[str, Any]],
+    volumes: Sequence[Volume],
     used_volumes: list[str],
-) -> list[str | dict[str, Any]]:
+) -> list[Volume]:
     bind_path = str(config["bind_path"])
     use_full_directory = bool(config["use_full_directory"])
     custom_binds = list(filter(is_custom_bind, volumes))
-    result: list[str | dict[str, Any]] = []
+    result: list[Volume] = []
 
     for volume in volumes:
         if isinstance(volume, dict):
@@ -164,26 +135,28 @@ def duplicate_entries(entries: list[str]) -> list[str]:
 
 
 def generate(
-    name: str, container: dict[str, Any], config: Config
-) -> dict[str, Any]:
+    name: str, container: Container, config: Config
+) -> dict[str, object]:
     folder = get_folder_name(name, container, config)
 
     restart_policy = str(config["restart_policy"])
     network = str(config["network_name"])
 
     used_volumes: list[str] = []
-    result: dict[str, Any] = {
-        "image": container.pop("image"),
+    result: dict[str, object] = {
+        "image": container.image,
         "hostname": name,
         "container_name": name,
-        "restart": container.get("restart", restart_policy),
+        "restart": container.restart or restart_policy,
     }
 
-    for option in OPTIONS:
-        if option not in container or option in ("folder", "name"):
+    for option in Container.fields():
+        if option in ("folder", "name", "image"):
             continue
 
-        value = container[option]
+        value = getattr(container, option)
+        if value is None:
+            continue
 
         match option:
             case "devices":
@@ -197,8 +170,8 @@ def generate(
             case _:
                 result[option] = value
 
-    if "network_mode" not in container:
-        result.setdefault("networks", []).append(network)
+    if not container.network_mode:
+        result["networks"] = [network]
 
     return result
 
@@ -244,7 +217,7 @@ def main(args: argparse.Namespace) -> None:
             gateway=gateway,
         )
     )
-    main_template["services"] = dict[str, Any]()
+    main_template["services"] = dict[str, object]()
 
     composes_template = (
         templates.joinpath("composes.yaml").read_text().lstrip()
@@ -260,21 +233,21 @@ def main(args: argparse.Namespace) -> None:
     for path in paths:
         used_names: list[str] = []
 
-        service: dict[str, dict[str, Any]] = yaml.safe_load(
+        service: dict[str, dict[str, object]] = yaml.safe_load(
             service_template.format(network=network)
         )
-        service["services"] = dict[str, Any]()
+        service["services"] = dict[str, object]()
 
         with open(path) as file:
-            containers: list[dict[str, Any]] = list(yaml.safe_load_all(file))
+            containers = load_containers(yaml.safe_load_all(file))
 
         for container in containers:
-            name = str(container.get("name", path.stem))
+            name = container.name or path.stem
             if name in used_names:
                 number = str(used_names.count(name) + 1)
-                container["name"] = name = f"{name}_{number}"
-                if container.get("folder"):
-                    container["folder"] += number
+                container.name = name = f"{name}_{number}"
+                if container.folder:
+                    container.folder += number
 
             used_names.append(name)
             service["services"][name] = generate(name, container, config)

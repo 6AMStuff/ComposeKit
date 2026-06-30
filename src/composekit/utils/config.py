@@ -1,13 +1,13 @@
 import os
-from typing import Any, ClassVar
+from typing import ClassVar
 
 import yaml
 
 
 class Config:
-    config: dict[str, Any]
+    config: dict[str, object]
     config_paths: ClassVar[tuple[str, ...]] = ()
-    default_values: ClassVar[dict[str, Any]] = {}
+    default_values: ClassVar[dict[str, object]] = {}
 
     def __init__(self) -> None:
         self.config = {}
@@ -21,10 +21,10 @@ class Config:
             with open(path) as file:
                 self.config.update(yaml.safe_load(file) or {})
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: object) -> None:
         self.config[key] = value
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> object | None:
         return (
             os.getenv(key.upper())
             or self.config.get(key.lower())

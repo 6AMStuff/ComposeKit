@@ -2,11 +2,11 @@ import argparse
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import yaml
 
+from composekit.container import Container
 from composekit.generate import (
     Config,
     capitalize_name,
@@ -40,7 +40,7 @@ class TestGenerate(unittest.TestCase):
     def test_handle_volumes_basic(self) -> None:
         config = make_mock_config()
         volumes = ["/volume", "/volume2"]
-        container: dict[str, Any] = {}
+        container = Container(image="nginx")
         folder = get_folder_name("container", container, config)
         result = handle_volumes(config, folder, volumes, [])
         expected = [
@@ -52,7 +52,7 @@ class TestGenerate(unittest.TestCase):
     def test_handle_volumes_with_custom_binds(self) -> None:
         config = make_mock_config()
         volumes = ["/volume:/volume", "/volume2:/volume2"]
-        container: dict[str, Any] = {}
+        container = Container(image="nginx")
         folder = get_folder_name("container", container, config)
         result = handle_volumes(config, folder, volumes, [])
         self.assertEqual(result, ["/volume:/volume", "/volume2:/volume2"])
@@ -60,7 +60,7 @@ class TestGenerate(unittest.TestCase):
     def test_handle_volumes_with_mount_options_and_custom_name(self) -> None:
         config = make_mock_config()
         volumes = ["/volume:ro;config", "/volume2:rw;data"]
-        container: dict[str, Any] = {}
+        container = Container(image="nginx")
         folder = get_folder_name("container", container, config)
         result = handle_volumes(config, folder, volumes, [])
         self.assertEqual(
@@ -82,7 +82,7 @@ class TestGenerate(unittest.TestCase):
 
     def test_generate_minimal(self) -> None:
         config = make_mock_config()
-        container = {"image": "nginx"}
+        container = Container(image="nginx")
         result = generate("web", container, config)
         self.assertEqual(result["image"], "nginx")
         self.assertEqual(result["hostname"], "web")
@@ -116,12 +116,29 @@ class TestGenerate(unittest.TestCase):
                 list(compose["services"].keys()), ["container", "container_2"]
             )
 
+    def test_generate_accepts_container(self) -> None:
+        config = make_mock_config()
+        container = Container(image="nginx", volumes=["/config"])
+        result = generate("web", container, config)
+        self.assertEqual(result["image"], "nginx")
+        self.assertEqual(result["volumes"], ["/bind/web:/config"])
+        self.assertEqual(result["networks"], ["cloud"])
+
+    def test_container_to_dict_uses_field_order(self) -> None:
+        container = Container.from_dict(
+            {"folder": "web", "image": "nginx", "ports": ["80:80"]}
+        )
+        self.assertEqual(
+            list(container.to_dict()),
+            ["image", "folder", "ports"],
+        )
+
     def test_handle_volumes_with_full_capitalize(self) -> None:
         config = Config()
         config["bind_path"] = "${BIND_PATH}"
         config["capitalize_folder_name"] = "full"
         volumes = ["/volume", "/volume2"]
-        container: dict[str, Any] = {}
+        container = Container(image="nginx")
         folder = get_folder_name("container", container, config)
         result = handle_volumes(config, folder, volumes, [])
         self.assertEqual(
@@ -137,7 +154,7 @@ class TestGenerate(unittest.TestCase):
         config["bind_path"] = "${BIND_PATH}"
         config["capitalize_folder_name"] = "non_custom"
         volumes = ["/volume", "/volume2"]
-        container: dict[str, Any] = {"folder": "container"}
+        container = Container(image="nginx", folder="container")
         folder = get_folder_name("container", container, config)
         result = handle_volumes(config, folder, volumes, [])
         self.assertEqual(
