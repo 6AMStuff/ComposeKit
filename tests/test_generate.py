@@ -1,6 +1,11 @@
+import argparse
+import tempfile
 import unittest
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
+
+import yaml
 
 from composekit.generate import (
     Config,
@@ -10,6 +15,7 @@ from composekit.generate import (
     get_folder_name,
     handle_volumes,
     is_custom_bind,
+    main,
 )
 
 
@@ -83,6 +89,32 @@ class TestGenerate(unittest.TestCase):
         self.assertEqual(result["container_name"], "web")
         self.assertEqual(result["restart"], "unless-stopped")
         self.assertEqual(result["networks"], ["cloud"])
+
+    def test_main_handles_duplicate_containers_without_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            containers = root / "containers"
+            composes = root / "composes"
+            output = root / "docker-compose.yaml"
+            containers.mkdir()
+            (containers / "container.yaml").write_text(
+                "image: nginx\n---\nimage: redis\n"
+            )
+
+            args = argparse.Namespace(
+                config=None,
+                containers=str(containers),
+                composes=str(composes),
+                output=str(output),
+                commit=False,
+            )
+
+            main(args)
+
+            compose = yaml.safe_load((composes / "container.yaml").read_text())
+            self.assertEqual(
+                list(compose["services"].keys()), ["container", "container_2"]
+            )
 
     def test_handle_volumes_with_full_capitalize(self) -> None:
         config = Config()
