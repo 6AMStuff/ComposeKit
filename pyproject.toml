@@ -10,8 +10,8 @@ authors = [
 requires-python = ">=3.10"
 
 dependencies = [
-  "GitPython>=3.1.46",
-  "PyYAML>=6.0.3",
+  "gitpython>=3.1.46",
+  "pyyaml>=6.0.3",
   "httpx[socks]>=0.28.1",
   "packaging>=26.2",
 ]
