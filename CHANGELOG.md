@@ -1,3 +1,32 @@
+## v1.0.2 (2026-06-30)
+
+### Bug Fixes
+
+- **generate**: handle duplicate containers without folder
+
+### Maintenance
+
+- **uv**: set version to 1.0.1
+- **commitizen**: switch version_provider from scm to uv
+
+### Tests
+
+- **generate**: cover duplicate containers without folder
+
+### Build System
+
+- **deps**: Bump the dependencies group with 3 updates
+- **deps**: normalize dependency names
+- **deps**: Bump the dependencies group across 1 directory with 3 updates
+- **deps**: Bump the dependencies group with 5 updates
+
+### Continuous Integration
+
+- **python-tests**: scope workflow token to contents:read
+- **dependabot**: configure dependabot
+- **python-tests**: scope push trigger to main branch
+- **python-tests**: rely on uv run to install dev deps
+
 ## v1.0.1 (2026-06-22)
 
 ### Bug Fixes
