@@ -273,7 +273,7 @@ def main(args: argparse.Namespace) -> None:
             if name in used_names:
                 number = str(used_names.count(name) + 1)
                 container["name"] = name = f"{name}_{number}"
-                if container["folder"]:
+                if container.get("folder"):
                     container["folder"] += number
 
             used_names.append(name)
