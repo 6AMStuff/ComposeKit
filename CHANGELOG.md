@@ -1,3 +1,49 @@
+## v1.1.0 (2026-10-06)
+
+### Features
+
+- **update**: add default and date-based version patterns
+- **update**: build the version from every capture group
+
+### Bug Fixes
+
+- **config**: find key value based on truthiness
+- **update**: pick the newest version instead of the newest tag
+
+### Code Refactoring
+
+- **update**: simplify limit parsing
+- **composekit**: clean up type checking and handle unused values
+- **composekit**: make pyrefly happy
+
+### Maintenance
+
+- **pyrefly**: set preset to all
+
+### Tests
+
+- **update**: share a config mock helper
+
+### Documentation
+
+- **readme**: update repository url
+
+### Build System
+
+- **deps**: Bump ruff in the uv-dependencies group (#39)
+- **deps**: Bump astral-sh/setup-uv (#34)
+- **deps**: Bump anyio from 4.13.0 to 4.14.2 (#37)
+- **deps**: Bump the uv-dependencies group across 1 directory with 4 updates
+- **deps**: Bump the uv-dependencies group across 1 directory with 5 updates
+- **deps**: Bump the github-actions-dependencies group across 1 directory with 2 updates
+- **deps**: Bump the uv-dependencies group with 3 updates
+- **deps**: Bump the uv-dependencies group across 1 directory with 3 updates
+- **deps**: Bump the github-actions-dependencies group across 1 directory with 3 updates
+
+### Continuous Integration
+
+- **dependabot**: rename dependency groups
+
 ## v1.0.2 (2026-06-30)
 
 ### Bug Fixes
