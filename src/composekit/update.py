@@ -127,14 +127,8 @@ async def find_versions(
     user: str | None,
     image: str,
 ) -> list[str]:
-    limit_config = options.get("limit", config["limit"])
-    limit = (
-        limit_config
-        if isinstance(limit_config, int)
-        else int(limit_config)
-        if isinstance(limit_config, str) and limit_config.isdigit()
-        else 10
-    )
+    limit_raw = str(options.get("limit", config["limit"]))
+    limit = int(limit_raw) if limit_raw.isdigit() else 10
     full_image = "/".join(filter(None, [registry, user, image]))
 
     try:
