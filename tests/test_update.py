@@ -6,10 +6,13 @@ from packaging.version import Version
 
 from composekit.container import Container
 from composekit.update import (
+    DATE_VERSION_PATTERN,
+    VERSION_PATTERN,
     extract_version,
     find_versions,
     parse_image,
     parse_version,
+    resolve_version_regex,
     update,
 )
 
@@ -73,12 +76,52 @@ class TestParse(unittest.TestCase):
                 r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})$",
                 "2026.1.20",
             ),
+            ("latest", r"^v?(\d+)\.(\d+)(?:\.(\d+))?$", None),
+            ("1.2.3", VERSION_PATTERN, "1.2.3"),
+            ("v1.2.3", VERSION_PATTERN, "1.2.3"),
+            ("1.2", VERSION_PATTERN, "1.2"),
+            ("v1.2", VERSION_PATTERN, "1.2"),
+            ("latest", VERSION_PATTERN, None),
+            ("2026.1.20", VERSION_PATTERN, None),
+            ("1234.5.6", VERSION_PATTERN, None),
+            ("2026.1.20", DATE_VERSION_PATTERN, "2026.1.20"),
+            ("2026.1.2", DATE_VERSION_PATTERN, "2026.1.2"),
+            ("v2026.1.20", DATE_VERSION_PATTERN, "2026.1.20"),
+            ("2024.12.05", DATE_VERSION_PATTERN, "2024.12.05"),
+            ("2024.12", DATE_VERSION_PATTERN, None),
+            ("2026.123", DATE_VERSION_PATTERN, None),
+            ("2026.13.1", DATE_VERSION_PATTERN, None),
+            ("2026.1.0", DATE_VERSION_PATTERN, None),
+            ("1.2", DATE_VERSION_PATTERN, None),
         ]
         for version_str, pattern, expected in cases:
             with self.subTest(version=version_str, pattern=pattern):
                 self.assertEqual(
                     extract_version(version_str, pattern), expected
                 )
+
+    def test_resolve_version_regex(self) -> None:
+        self.assertEqual(resolve_version_regex({}), VERSION_PATTERN)
+        self.assertEqual(
+            resolve_version_regex({"date_versions": True}),
+            DATE_VERSION_PATTERN,
+        )
+        self.assertEqual(
+            resolve_version_regex({"date_versions": False}), VERSION_PATTERN
+        )
+        custom = r"^(\d+\.\d+\.\d+)-\w+$"
+        self.assertEqual(
+            resolve_version_regex({"version_regex": custom}), custom
+        )
+        self.assertEqual(
+            resolve_version_regex(
+                {"version_regex": custom, "date_versions": True}
+            ),
+            custom,
+        )
+        self.assertEqual(
+            resolve_version_regex({"version_regex": 42}), VERSION_PATTERN
+        )
 
     def test_parse_version(self) -> None:
         cases = [
@@ -130,6 +173,34 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(newest_version, "1.0.2")
             self.assertTrue(full_image.endswith("user/image"))
             self.assertEqual(image, "image")
+
+    async def test_update_unparsable_version(self) -> None:
+        container = Container(image="user/image:latest")
+        self.assertIsNone(await update(make_config(), container, AsyncMock()))
+
+    async def test_update_date_version_requires_flag(self) -> None:
+        container = Container(image="user/image:2026.1.20")
+        with patch(
+            "composekit.update.find_versions", new_callable=AsyncMock
+        ) as mock_find:
+            mock_find.return_value = ["2026.2.1"]
+            self.assertIsNone(
+                await update(make_config(), container, AsyncMock())
+            )
+
+    async def test_update_date_version_with_flag(self) -> None:
+        container = Container(image="user/image:2026.1.20")
+        config = make_config(
+            {"user/image": {"update": True, "date_versions": True}}
+        )
+        with patch(
+            "composekit.update.find_versions", new_callable=AsyncMock
+        ) as mock_find:
+            mock_find.return_value = ["2026.1.21", "2026.2.1"]
+            result = await update(config, container, AsyncMock())
+            if result is None:
+                self.fail("expected update result")
+            self.assertEqual(result[2], "2026.2.1")
 
     async def test_update_disabled(self) -> None:
         config = make_config({"user/image": {"update": False}})

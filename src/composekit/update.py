@@ -29,6 +29,10 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+VERSION_PATTERN = r"^v?(\d{1,3})\.(\d+)(?:\.(\d+))?$"
+DATE_VERSION_PATTERN = r"^v?(\d{4})\.(0?[1-9]|1[0-2])\.(0?[1-9]|[12]\d|3[01])$"
+
+
 class Config(_Config):
     config_paths = ("config/update.yaml", "config/update.private.yaml")
     default_values: ClassVar[dict[str, object]] = {
@@ -104,6 +108,17 @@ def get_update_options(
     return {}
 
 
+def resolve_version_regex(options: dict[str, object]) -> str:
+    version_regex = options.get("version_regex")
+    if isinstance(version_regex, str):
+        return version_regex
+
+    if options.get("date_versions") is True:
+        return DATE_VERSION_PATTERN
+
+    return VERSION_PATTERN
+
+
 async def find_versions(
     config: Config,
     options: dict[str, object],
@@ -163,10 +178,7 @@ async def update(
         logging.info(f"{full_image}: Update is disabled.")
         return None
 
-    version_regex_config = options.get("version_regex")
-    version_regex = (
-        version_regex_config if isinstance(version_regex_config, str) else None
-    )
+    version_regex = resolve_version_regex(options)
 
     if not isinstance(
         current_version := parse_version(
