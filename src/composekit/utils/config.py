@@ -31,5 +31,5 @@ class Config:
             self.default_values.get(key),
         )
         for value in sources:
-            if value is not None:
+            if bool(value):
                 return value
