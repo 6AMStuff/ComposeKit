@@ -14,6 +14,23 @@ from composekit.update import (
 )
 
 
+def make_config(overrides: dict[str, object] | None = None) -> MagicMock:
+    data: dict[str, object] = {
+        "default_registry": "docker.io",
+        "limit": 10,
+        "timeout": 5,
+        "user/image": {"update": True},
+        "user": {},
+        "image": {},
+    }
+    if overrides is not None:
+        data.update(overrides)
+
+    config = MagicMock()
+    config.__getitem__.side_effect = data.__getitem__
+    return config
+
+
 class TestParse(unittest.TestCase):
     def test_parse_image(self) -> None:
         cases = [
@@ -50,7 +67,7 @@ class TestParse(unittest.TestCase):
             ("no-match", r"\d+\.\d+\.\d+", None),
         ]
         for version_str, pattern, expected in cases:
-            with self.subTest(version_str=version_str):
+            with self.subTest(version=version_str):
                 self.assertEqual(
                     extract_version(version_str, pattern), expected
                 )
@@ -64,7 +81,7 @@ class TestParse(unittest.TestCase):
             ("not-a-version", None),
         ]
         for version_str, expected in cases:
-            with self.subTest(version_str=version_str):
+            with self.subTest(version=version_str):
                 result = parse_version(version_str)
                 if expected is None:
                     self.assertIsNone(result)
@@ -74,22 +91,18 @@ class TestParse(unittest.TestCase):
 
 class TestUpdate(unittest.IsolatedAsyncioTestCase):
     async def test_find_versions_mocked(self) -> None:
-        def get_config(key: str) -> object:
-            return {"limit": 2}[key]
-
-        config = MagicMock()
-        config.__getitem__.side_effect = get_config
-        options: dict[str, object] = {}
-        registry = None
-        user = "user"
-        image = "image"
         with patch(
             "composekit.update.list_tags", new_callable=AsyncMock
         ) as mock_list_tags:
             mock_list_tags.return_value = ["1.0.0", "1.1.0", "1.2.0"]
             async with httpx.AsyncClient() as client:
                 result = await find_versions(
-                    config, options, client, registry, user, image
+                    make_config({"limit": 2}),
+                    {},
+                    client,
+                    None,
+                    "user",
+                    "image",
                 )
                 self.assertTrue(
                     result == ["1.1.0", "1.2.0"]
@@ -97,24 +110,12 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
                 )
 
     async def test_update_new_version(self) -> None:
-        def get_config(key: str) -> object:
-            return {
-                "default_registry": "docker.io",
-                "limit": 10,
-                "timeout": 5,
-                "user/image": {"update": True},
-                "user": dict[str, object](),
-                "image": dict[str, object](),
-            }[key]
-
-        config = MagicMock()
-        config.__getitem__.side_effect = get_config
         container = Container(image="user/image:1.0.0")
         with patch(
             "composekit.update.find_versions", new_callable=AsyncMock
         ) as mock_find:
             mock_find.return_value = ["1.0.1", "1.0.2"]
-            result = await update(config, container, AsyncMock())
+            result = await update(make_config(), container, AsyncMock())
             if result is None:
                 self.fail("expected update result")
             full_image, image, newest_version = result
@@ -122,40 +123,7 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(full_image.endswith("user/image"))
             self.assertEqual(image, "image")
 
-    async def test_update_accepts_container(self) -> None:
-        def get_config(key: str) -> object:
-            return {
-                "default_registry": "docker.io",
-                "limit": 10,
-                "timeout": 5,
-                "user/image": {"update": True},
-                "user": dict[str, object](),
-                "image": dict[str, object](),
-            }[key]
-
-        config = MagicMock()
-        config.__getitem__.side_effect = get_config
-        container = Container(image="user/image:1.0.0")
-        with patch(
-            "composekit.update.find_versions", new_callable=AsyncMock
-        ) as mock_find:
-            mock_find.return_value = ["1.0.1", "1.0.2"]
-            result = await update(config, container, AsyncMock())
-            if result is None:
-                self.fail("expected update result")
-            self.assertEqual(result[2], "1.0.2")
-
     async def test_update_disabled(self) -> None:
-        def get_config(key: str) -> object:
-            return {
-                "default_registry": "docker.io",
-                "limit": 10,
-                "timeout": 5,
-                "user/image": {"update": False},
-            }[key]
-
-        config = MagicMock()
-        config.__getitem__.side_effect = get_config
+        config = make_config({"user/image": {"update": False}})
         container = Container(image="user/image:1.0.0")
-        result = await update(config, container, AsyncMock())
-        self.assertIsNone(result)
+        self.assertIsNone(await update(config, container, AsyncMock()))
