@@ -119,6 +119,19 @@ def resolve_version_regex(options: dict[str, object]) -> str:
     return VERSION_PATTERN
 
 
+def select_versions(
+    tags: list[str], version_regex: str, limit: int
+) -> list[tuple[Version, str]]:
+    parsed: list[tuple[Version, str]] = []
+    for tag in tags:
+        version = parse_version(extract_version(tag, version_regex))
+        if isinstance(version, Version):
+            parsed.append((version, tag))
+
+    parsed.sort(key=itemgetter(0))
+    return parsed[-limit:] if limit > 0 else parsed
+
+
 async def find_versions(
     config: Config,
     options: dict[str, object],
@@ -126,9 +139,11 @@ async def find_versions(
     registry: str | None,
     user: str | None,
     image: str,
-) -> list[str]:
+    version_regex: str,
+) -> list[tuple[Version, str]]:
     limit_raw = str(options.get("limit", config["limit"]))
     limit = int(limit_raw) if limit_raw.isdigit() else 10
+
     full_image = "/".join(filter(None, [registry, user, image]))
 
     try:
@@ -142,14 +157,15 @@ async def find_versions(
             username if isinstance(username, str) else None,
             password if isinstance(password, str) else None,
         )
-        if len(tags) == 0:
-            raise Exception("No tags found.")
-
-        return tags[-limit:]
     except Exception as e:
         logging.error(f"{full_image}: {e}")
+        return []
 
-    return []
+    versions = select_versions(tags, version_regex, limit)
+    if len(versions) == 0:
+        logging.error(f"{full_image}: No version tags found.")
+
+    return versions
 
 
 async def update(
@@ -174,36 +190,29 @@ async def update(
 
     version_regex = resolve_version_regex(options)
 
-    if not isinstance(
-        current_version := parse_version(
-            extract_version(version, version_regex)
-        ),
-        Version,
-    ):
+    current_version = parse_version(extract_version(version, version_regex))
+    if current_version is None:
         logging.error(
             f"{full_image}: Could not parse the version '{version}'."
         )
         return None
 
-    raw_versions = await find_versions(
-        config, options, client, registry, user, image
+    tags = await find_versions(
+        config,
+        options,
+        client,
+        registry,
+        user,
+        image,
+        version_regex=version_regex,
     )
-
-    versions: list[tuple[Version, str]] = [
-        (v, version)
-        for version in raw_versions
-        if isinstance(
-            v := parse_version(extract_version(version, version_regex)),
-            Version,
-        )
-        and v > current_version
+    newer_versions = [
+        tag for version, tag in tags if version > current_version
     ]
-
-    newest_version = max(versions, key=itemgetter(0), default=(None, None))[1]
-    if newest_version is None:
+    if len(newer_versions) == 0:
         return None
 
-    return full_image, image, newest_version
+    return full_image, image, newer_versions[-1]
 
 
 async def process_file(

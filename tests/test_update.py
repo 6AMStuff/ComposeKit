@@ -76,7 +76,6 @@ class TestParse(unittest.TestCase):
                 r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})$",
                 "2026.1.20",
             ),
-            ("latest", r"^v?(\d+)\.(\d+)(?:\.(\d+))?$", None),
             ("1.2.3", VERSION_PATTERN, "1.2.3"),
             ("v1.2.3", VERSION_PATTERN, "1.2.3"),
             ("1.2", VERSION_PATTERN, "1.2"),
@@ -141,11 +140,16 @@ class TestParse(unittest.TestCase):
 
 
 class TestUpdate(unittest.IsolatedAsyncioTestCase):
-    async def test_find_versions_mocked(self) -> None:
+    async def test_find_versions_sorts_and_limits(self) -> None:
         with patch(
             "composekit.update.list_tags", new_callable=AsyncMock
         ) as mock_list_tags:
-            mock_list_tags.return_value = ["1.0.0", "1.1.0", "1.2.0"]
+            mock_list_tags.return_value = [
+                "1.2.0",
+                "1.10.0",
+                "latest",
+                "1.9.0",
+            ]
             async with httpx.AsyncClient() as client:
                 result = await find_versions(
                     make_config({"limit": 2}),
@@ -154,10 +158,38 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
                     None,
                     "user",
                     "image",
+                    version_regex=VERSION_PATTERN,
                 )
-                self.assertTrue(
-                    result == ["1.1.0", "1.2.0"]
-                    or result[-2:] == ["1.1.0", "1.2.0"]
+                self.assertEqual(
+                    result,
+                    [
+                        (Version("1.9.0"), "1.9.0"),
+                        (Version("1.10.0"), "1.10.0"),
+                    ],
+                )
+
+    async def test_find_versions_invalid_limit(self) -> None:
+        with patch(
+            "composekit.update.list_tags", new_callable=AsyncMock
+        ) as mock_list_tags:
+            mock_list_tags.return_value = ["1.0.0", "1.1.0", "1.2.0"]
+            async with httpx.AsyncClient() as client:
+                result = await find_versions(
+                    make_config({"limit": "not-a-number"}),
+                    {},
+                    client,
+                    None,
+                    "user",
+                    "image",
+                    version_regex=VERSION_PATTERN,
+                )
+                self.assertEqual(
+                    result,
+                    [
+                        (Version("1.0.0"), "1.0.0"),
+                        (Version("1.1.0"), "1.1.0"),
+                        (Version("1.2.0"), "1.2.0"),
+                    ],
                 )
 
     async def test_update_new_version(self) -> None:
@@ -165,14 +197,43 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
         with patch(
             "composekit.update.find_versions", new_callable=AsyncMock
         ) as mock_find:
-            mock_find.return_value = ["1.0.1", "1.0.2"]
+            mock_find.return_value = [
+                (Version("1.0.1"), "1.0.1"),
+                (Version("1.0.2"), "1.0.2"),
+            ]
             result = await update(make_config(), container, AsyncMock())
             if result is None:
                 self.fail("expected update result")
-            full_image, image, newest_version = result
-            self.assertEqual(newest_version, "1.0.2")
-            self.assertTrue(full_image.endswith("user/image"))
-            self.assertEqual(image, "image")
+            self.assertEqual(result, ("user/image", "image", "1.0.2"))
+
+    async def test_update_keeps_newest_by_version_not_order(self) -> None:
+        container = Container(image="user/image:1.9.0")
+        with patch(
+            "composekit.update.find_versions", new_callable=AsyncMock
+        ) as mock_find:
+            mock_find.return_value = [
+                (Version("1.10.0"), "1.10.0"),
+                (Version("2.1.1"), "2.1.1"),
+                (Version("150.0.0"), "150.0.0"),
+            ]
+            result = await update(make_config(), container, AsyncMock())
+            if result is None:
+                self.fail("expected update result")
+            self.assertEqual(result[2], "150.0.0")
+
+    async def test_update_no_newer_version(self) -> None:
+        container = Container(image="user/image:2.0.0")
+        with patch(
+            "composekit.update.find_versions", new_callable=AsyncMock
+        ) as mock_find:
+            mock_find.return_value = [(Version("1.0.0"), "1.0.0")]
+            self.assertIsNone(
+                await update(make_config(), container, AsyncMock())
+            )
+
+    async def test_update_invalid_image(self) -> None:
+        container = Container(image="too/many/segments/for/image:1.0.0")
+        self.assertIsNone(await update(make_config(), container, AsyncMock()))
 
     async def test_update_unparsable_version(self) -> None:
         container = Container(image="user/image:latest")
@@ -183,10 +244,9 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
         with patch(
             "composekit.update.find_versions", new_callable=AsyncMock
         ) as mock_find:
-            mock_find.return_value = ["2026.2.1"]
-            self.assertIsNone(
-                await update(make_config(), container, AsyncMock())
-            )
+            mock_find.return_value = [(Version("2026.2.1"), "2026.2.1")]
+            result = await update(make_config(), container, AsyncMock())
+        self.assertIsNone(result)
 
     async def test_update_date_version_with_flag(self) -> None:
         container = Container(image="user/image:2026.1.20")
@@ -196,11 +256,21 @@ class TestUpdate(unittest.IsolatedAsyncioTestCase):
         with patch(
             "composekit.update.find_versions", new_callable=AsyncMock
         ) as mock_find:
-            mock_find.return_value = ["2026.1.21", "2026.2.1"]
+            mock_find.return_value = [
+                (Version("2026.1.21"), "2026.1.21"),
+                (Version("2026.2.1"), "2026.2.1"),
+            ]
             result = await update(config, container, AsyncMock())
             if result is None:
                 self.fail("expected update result")
             self.assertEqual(result[2], "2026.2.1")
+            await_args = mock_find.await_args
+            self.assertIsNotNone(await_args)
+            if await_args is None:
+                self.fail("expected find_versions to be called")
+            self.assertEqual(
+                await_args.kwargs["version_regex"], DATE_VERSION_PATTERN
+            )
 
     async def test_update_disabled(self) -> None:
         config = make_config({"user/image": {"update": False}})
