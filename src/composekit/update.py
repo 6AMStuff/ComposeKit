@@ -43,11 +43,11 @@ def extract_version(version: str, pattern: str | None) -> str | None:
     if pattern is None:
         return version
 
-    match = re.search(pattern, version)
-    if match is not None and len(match.groups()) > 0:
-        return match.group(1)
+    groups: list[str] = []
+    if (match := re.search(pattern, version)) is not None:
+        groups = [group for group in match.groups() if group is not None]
 
-    return None
+    return ".".join(groups) if len(groups) > 0 else None
 
 
 def parse_image(image: str) -> tuple[str | None, str | None, str, str] | None:

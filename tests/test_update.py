@@ -63,11 +63,19 @@ class TestParse(unittest.TestCase):
         cases = [
             ("v1.2.3", None, "v1.2.3"),
             ("2026.1.20-abcdef", r"^(\d+\.\d+\.\d+)-\w+$", "2026.1.20"),
+            ("9.2-alpine", r"^(\d+\.\d+)-alpine$", "9.2"),
             ("1.2.3-beta", r"(\d+\.\d+\.\d+)", "1.2.3"),
             ("no-match", r"\d+\.\d+\.\d+", None),
+            ("v1.2.3", r"^v?(\d+)\.(\d+)(?:\.(\d+))?$", "1.2.3"),
+            ("1.2", r"^v?(\d+)\.(\d+)(?:\.(\d+))?$", "1.2"),
+            (
+                "v2026.1.20",
+                r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})$",
+                "2026.1.20",
+            ),
         ]
         for version_str, pattern, expected in cases:
-            with self.subTest(version=version_str):
+            with self.subTest(version=version_str, pattern=pattern):
                 self.assertEqual(
                     extract_version(version_str, pattern), expected
                 )
