@@ -15,12 +15,16 @@ if TYPE_CHECKING:
 try:
     import httpx
     import yaml
-    from git import Repo
     from packaging.version import InvalidVersion, Version
 
     from composekit.container import Container, load_containers
     from composekit.utils import Config as _Config
-    from composekit.utils import iter_container_files, list_tags, open_repo
+    from composekit.utils import (
+        Repository,
+        iter_container_files,
+        list_tags,
+        open_repo,
+    )
 except ImportError as err:
     raise RuntimeError(
         "ERROR: Missing required packages. See the README."
@@ -223,7 +227,7 @@ async def process_file(
     path: Path,
     client: httpx.AsyncClient,
     config: Config,
-    repo: Repo | None,
+    repo: Repository | None,
     git_lock: asyncio.Lock,
 ) -> None:
     with open(path) as file:
@@ -246,8 +250,8 @@ async def process_file(
                 )
 
             if repo is not None:
-                _ = repo.index.add(path)
-                _ = repo.index.commit(
+                repo.add(path)
+                repo.commit(
                     f"chore({path.stem}): update {image} to {newest_version}"
                 )
 
