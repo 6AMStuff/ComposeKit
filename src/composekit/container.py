@@ -68,8 +68,8 @@ def load_containers(documents: Iterable[object]) -> list[Container]:
             raise TypeError("container entry must be a mapping")
 
         data: dict[str, object] = {}
-        for key, value in document.items():
-            value: str | list[str]
+        mapping: Mapping[object, object] = document
+        for key, value in mapping.items():
             if not isinstance(key, str):
                 raise TypeError("container keys must be strings")
 

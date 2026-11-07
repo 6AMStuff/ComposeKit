@@ -30,7 +30,7 @@ def make_config(overrides: dict[str, object] | None = None) -> MagicMock:
         data.update(overrides)
 
     config = MagicMock()
-    config.__getitem__.side_effect = data.__getitem__
+    config.__getitem__ = MagicMock(side_effect=data.__getitem__)
     return config
 
 

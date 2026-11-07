@@ -7,7 +7,10 @@ import re
 import sys
 from operator import itemgetter
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 try:
     import httpx
@@ -99,9 +102,10 @@ def get_update_options(
     for item in (full_image, f"{user}/{image}", image):
         config_data = config[item]
         if isinstance(config_data, dict):
+            mapping: Mapping[object, object] = config_data
             return {
                 key: value
-                for key, value in config_data.items()
+                for key, value in mapping.items()
                 if isinstance(key, str)
             }
 

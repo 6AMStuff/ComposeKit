@@ -30,7 +30,7 @@ def make_mock_config(bind_path: str = "/bind") -> Config:
         }[key]
 
     config = MagicMock(spec=Config)
-    config.__getitem__.side_effect = get_config
+    config.__getitem__ = MagicMock(side_effect=get_config)
     return config
 
 
