@@ -1,3 +1,28 @@
+## v1.2.0 (2026-11-15)
+
+### Features
+
+- add support for docker compose profiles
+
+### Bug Fixes
+
+- resolve pyrefly diagnostics
+
+### Build System
+
+- **deps**: manually bump packages
+- **deps**: Bump astral-sh/setup-uv (#48)
+- **deps**: Bump the uv-dependencies group across 1 directory with 4 updates (#50)
+- **deps**: Bump certifi from 2026.2.25 to 2026.10.19 (#44)
+- **deps**: Bump the github-actions-dependencies group across 1 directory with 2 updates (#46)
+- **deps**: Bump the uv-dependencies group across 1 directory with 3 updates (#47)
+- **deps**: Bump ruff (#41)
+- **deps**: Bump the uv-dependencies group with 3 updates (#40)
+
+### Continuous Integration
+
+- **github**: add support for python 3.15
+
 ## v1.1.0 (2026-10-06)
 
 ### Features
