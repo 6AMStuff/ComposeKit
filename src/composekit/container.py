@@ -12,6 +12,7 @@ class Container:
     folder: str | None = None
     name: str | None = None
     restart: str | None = None
+    profiles: list[str] | None = None
     privileged: bool | None = None
     network: str | None = None
     network_mode: str | None = None
